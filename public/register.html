@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pet Adoption Board - Login</title>
+    <title>Pet Adoption Board - Register</title>
     <link rel="stylesheet" href="stylesheets/style.css">
 </head>
 
@@ -23,10 +23,10 @@
 
     <div class="container">
         <div class="login-container">
-            <h2>Login</h2>
-            
-            <!-- Login form -->
-            <form id="login-form">
+            <h2>Register</h2>
+
+            <!-- Register form -->
+            <form id="register-form">
                 <div class="form-group">
                     <label>Username:</label>
                     <input type="text" name="username" id="username" required>
@@ -35,21 +35,25 @@
                     <label>Password:</label>
                     <input type="password" name="password" id="password" required>
                 </div>
-                <button type="submit">Login</button>
+                <div class="form-group">
+                    <label>Confirm Password:</label>
+                    <input type="password" name="confirmPassword" id="confirmPassword" required>
+                </div>
+                <button type="submit">Register</button>
             </form>
 
             <!-- Error message display area -->
             <div id="error-message" class="error"></div>
 
-            <!-- Register link -->
+            <!-- Login link -->
             <div class="auth-link">
-                <p>Don't have an account? <a href="/register.html">Register here</a></p>
+                <p>Already have an account? <a href="/login.html">Login here</a></p>
             </div>
         </div>
     </div>
 
 
-    <script src="javascripts/login.js"></script>
+    <script src="javascripts/register.js"></script>
 </body>
 
 </html>
