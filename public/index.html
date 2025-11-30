@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Adoption Board - Home</title>
+    <link rel="stylesheet" href="stylesheets/style.css">
+</head>
+
+<body>
+    <!-- Navigation bar -->
+    <nav class="navbar">
+        <div class="container">
+            <a class="brand" href="/">Pet Adoption Board</a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/add-pet.html">Add Pet</a>
+                <a href="/pet-details.html">Pet Details</a>
+                <a href="/login.html">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Available Pets for Adoption</h1>
+
+        <!-- Filter and search forms -->
+        <div class="search-section">
+            <!-- Filter pets by type -->
+            <form id="filter-form">
+                <select name="type" id="type-select">
+                    <option value="">All Types</option>
+                    <option value="Dog">Dog</option>
+                    <option value="Cat">Cat</option>
+                </select>
+                <button type="submit">Filter</button>
+            </form>
+
+            <!-- Search pets by name -->
+            <form id="search-form">
+                <input type="text" name="search" id="search-input" placeholder="Search by name...">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+
+        <!-- Search results message -->
+        <div id="search-result"></div>
+
+        <!-- Pet cards container - populated dynamically -->
+        <div class="pets-grid" id="pets-grid">
+            <!-- Pets will be loaded here dynamically -->
+        </div>
+    </div>
+
+    <script src="javascripts/index.js"></script>
+</body>
+
+</html>
