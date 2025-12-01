@@ -254,10 +254,13 @@ button[type="submit"]:hover {
 
 .pet-detail-container img {
   width: 100%;
-  max-width: 600px;
+  max-width: 400px;
   height: auto;
   border-radius: 8px;
   margin-bottom: 1rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .pet-info {
@@ -292,4 +295,135 @@ button[type="submit"]:hover {
 }
 #search-result:empty {
   display: none;
+}
+
+/* ==========================================
+   RENDERING MODE TOGGLE STYLES
+   ========================================== */
+
+.rendering-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: white;
+}
+
+.toggle-label {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.mode-description {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.toggle-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.mode-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.mode-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.client-mode {
+  background-color: #3498db;
+  color: white;
+}
+
+.server-mode {
+  background-color: #e74c3c;
+  color: white;
+}
+
+/* Toggle Switch Styles */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #3498db;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #e74c3c;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Info Box Styles */
+.info-box {
+  padding: 1rem;
+  margin-bottom: 2rem;
+  background-color: #e8f4f8;
+  border-left: 4px solid #3498db;
+  border-radius: 4px;
+}
+
+.info-box p {
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.info-box ul {
+  margin-left: 1.5rem;
+  color: #555;
+}
+
+.info-box ul li {
+  margin-bottom: 0.3rem;
 }

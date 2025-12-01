@@ -5,6 +5,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -23,8 +24,8 @@ CREATE TABLE IF NOT EXISTS pets (
 );
 
 -- Insert sample admin user if not exists
-INSERT OR IGNORE INTO users (username, password)
-VALUES ('admin', 'admin123');
+INSERT OR IGNORE INTO users (username, email, password)
+VALUES ('admin', 'admin@petadoption.com', 'admin123');
 
 -- Insert sample pets (all added by admin user with id=1)
 INSERT INTO pets (name, type, age, image_url, description, user_id) VALUES
