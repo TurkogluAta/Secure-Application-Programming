@@ -24,7 +24,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const pet = await response.json();
             // Render pet details card
             detailsDiv.innerHTML = `
-                <div class="pet-details-card">
+                <div class="pet-detail-container">
                     <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">
                     <h2>${pet.name}</h2>
                     <p><strong>Type:</strong> ${pet.type}</p>

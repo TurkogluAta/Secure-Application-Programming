@@ -1,3 +1,13 @@
+// Check if user is logged in when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (!Auth.isLoggedIn()) {
+        // Redirect to login page if not authenticated
+        alert('Please login to add a pet!');
+        window.location.href = '/login.html';
+        return;
+    }
+});
+
 // Handle add pet form submission
 document.getElementById('add-pet-form').addEventListener('submit', async (e) => {
     e.preventDefault();

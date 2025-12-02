@@ -43,28 +43,23 @@
 
         <!-- Educational note about rendering modes -->
         <div class="info-box">
-            <p><strong>Educational Demo:</strong> Toggle between two rendering approaches to see how the same vulnerabilities manifest differently!</p>
+            <p><strong>Educational Demo:</strong> Toggle between two rendering approaches to see how the same
+                vulnerabilities manifest differently!</p>
             <ul id="vulnerability-list">
                 <li><strong>Client-Side:</strong> JSON API + JavaScript rendering (DOM-based XSS)</li>
             </ul>
         </div>
 
-        <!-- Filter and search forms -->
+        <!-- Combined filter and search form -->
         <div class="search-section">
-            <!-- Filter pets by type -->
-            <form id="filter-form">
+            <form id="search-form">
                 <select name="type" id="type-select">
                     <option value="">All Types</option>
                     <option value="dog">Dog</option>
                     <option value="cat">Cat</option>
                 </select>
-                <button type="submit">Filter</button>
-            </form>
-
-            <!-- Search pets by name -->
-            <form id="search-form">
                 <input type="text" name="search" id="search-input" placeholder="Search by name...">
-                <button type="submit">Search</button>
+                <button type="submit">Search & Filter</button>
             </form>
         </div>
 
@@ -76,7 +71,8 @@
             <!-- Pets will be loaded here dynamically -->
         </div>
     </div>
-
+    <script src="javascripts/auth.js"></script>
+    <script src="javascripts/navbar.js"></script>
     <script src="javascripts/index.js"></script>
 </body>
 

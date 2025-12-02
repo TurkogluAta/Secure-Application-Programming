@@ -29,6 +29,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 localStorage.setItem('authToken', result.token);
             }
 
+            // Save user data to localStorage using Auth utility
+            if (result.user) {
+                Auth.login(result.user);
+            }
+
             // Redirect to home page on success
             window.location.href = '/';
         } else {

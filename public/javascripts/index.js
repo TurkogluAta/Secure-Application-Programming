@@ -1,36 +1,66 @@
-// Handle filter form submission
-document.getElementById('filter-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const type = document.getElementById('type-select').value;
-    
-    try {
-        // Fetch pets by type from API
-        const response = await fetch(`/api/pets${type ? '?type=' + encodeURIComponent(type) : ''}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+/**
+ * EDUCATIONAL: Rendering Mode Toggle
+ *
+ * This allows switching between two different rendering approaches:
+ * - Client-Side: Modern JSON API + JavaScript rendering (default)
+ * - Server-Side: Traditional HTML rendering from server
+ */
+let isServerSideMode = false;
 
-        if (response.ok) {
-            const pets = await response.json();
-            displayPets(pets);
-        } else {
-            console.error('Filter failed:', response.statusText);
-        }
-    } catch (error) {
-        console.error('Error filtering pets:', error);
+// Handle rendering mode toggle
+document.getElementById('rendering-mode-switch').addEventListener('change', (e) => {
+    isServerSideMode = e.target.checked;
+
+    const modeDescription = document.getElementById('mode-description');
+    const currentMode = document.getElementById('current-mode');
+    const vulnerabilityList = document.getElementById('vulnerability-list');
+
+    if (isServerSideMode) {
+        modeDescription.textContent = 'Server-Side (Traditional HTML Rendering)';
+        currentMode.textContent = 'Server-Side';
+        currentMode.className = 'mode-badge server-mode';
+        vulnerabilityList.innerHTML = '<li><strong>Server-Side:</strong> Server renders HTML (Reflected XSS + Stored XSS)</li>';
+    } else {
+        modeDescription.textContent = 'Client-Side (Modern JSON API + JS)';
+        currentMode.textContent = 'Client-Side';
+        currentMode.className = 'mode-badge client-mode';
+        vulnerabilityList.innerHTML = '<li><strong>Client-Side:</strong> JSON API + JavaScript rendering (DOM-based XSS)</li>';
     }
 });
 
-// Handle search form submission
+// Handle combined search and filter form submission
 document.getElementById('search-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const searchTerm = document.getElementById('search-input').value;
-    
+    const type = document.getElementById('type-select').value;
+
+    // CHECK RENDERING MODE
+    if (isServerSideMode) {
+        // SERVER-SIDE MODE: Redirect to server-rendered page
+        // This will demonstrate Reflected XSS in server-side rendering
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('q', searchTerm);
+        if (type) params.append('type', type);
+        window.location.href = `/api/search-results?${params.toString()}`;
+        return; // Stop execution, browser will navigate away
+    }
+
+    // CLIENT-SIDE MODE (default): Use JavaScript to fetch and render
+
+    // VULNERABILITY 2: DOM XSS
+    // Show search term BEFORE fetching (vulnerable to XSS)
+    if (searchTerm) {
+        document.getElementById('search-result').innerHTML = `<p>Searching for: ${searchTerm}</p>`;
+    }
+
     try {
-        // Fetch pets matching search term from API
-        const response = await fetch(`/api/pets${searchTerm ? '?search=' + encodeURIComponent(searchTerm) : ''}`, {
+        // Build query string with both search and type parameters
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (type) params.append('type', type);
+
+        // Fetch pets matching search term and type from API
+        const response = await fetch(`/api/pets?${params.toString()}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -40,15 +70,23 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
         if (response.ok) {
             const pets = await response.json();
             displayPets(pets);
-            // Show search term if present
-            if (searchTerm) {
-                document.getElementById('search-result').innerHTML = `<p>Search results for: ${searchTerm}</p>`;
+            // Update search result message
+            if (searchTerm || type) {
+                let message = 'Results';
+                if (searchTerm && type) {
+                    message = `Search results for: ${searchTerm} (${type})`;
+                } else if (searchTerm) {
+                    message = `Search results for: ${searchTerm}`;
+                } else if (type) {
+                    message = `Filtered by: ${type}`;
+                }
+                document.getElementById('search-result').innerHTML = `<p>${message}</p>`;
             }
         } else {
-            console.error('Search failed:', response.statusText);
+            console.error('Search/Filter failed:', response.statusText);
         }
     } catch (error) {
-        console.error('Error searching pets:', error);
+        console.error('Error searching/filtering pets:', error);
     }
 });
 

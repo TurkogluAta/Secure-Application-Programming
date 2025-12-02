@@ -7,6 +7,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
 
     // Get form values
     const username = document.getElementById('username').value;
+    const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -19,6 +20,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     // Collect credentials from form
     const credentials = {
         username: username,
+        email: email,
         password: password
     };
 
@@ -40,9 +42,14 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
                 localStorage.setItem('authToken', result.token);
             }
 
-            // Show success message and redirect to login
-            alert('Registration successful! Please login with your credentials.');
-            window.location.href = '/login.html';
+            // Save user data to localStorage and auto-login
+            if (result.user) {
+                Auth.login(result.user);
+            }
+
+            // Show success message and redirect to home
+            alert('Registration successful! You are now logged in.');
+            window.location.href = '/';
         } else {
             const error = await response.json();
             errorDiv.innerHTML = `<p>${error.message || 'Registration failed. Please try again.'}</p>`;
