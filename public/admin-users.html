@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - User Management</title>
+    <link rel="stylesheet" href="stylesheets/style.css">
+    <link rel="stylesheet" href="stylesheets/admin.css">
+</head>
+
+<body>
+    <!-- Navigation bar -->
+    <nav class="navbar">
+        <div class="container">
+            <a class="brand" href="/">Pet Adoption Board</a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/add-pet.html">Add Pet</a>
+                <a href="/admin-users.html">Admin Panel</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Admin Panel - User Management</h1>
+
+        <!-- VULNERABILITY: Frontend-only access control warning -->
+        <div class="warning-box">
+            <strong>INSECURE:</strong> This page uses client-side only access control.
+            Anyone can access /api/users directly via curl or Postman!
+        </div>
+
+        <div id="access-denied" class="error-message">
+            <h2>Access Denied</h2>
+            <p>You must be an administrator to view this page.</p>
+            <a href="/">Go back to home</a>
+        </div>
+
+        <div id="users-content">
+            <p>Total Users: <strong id="user-count">0</strong></p>
+
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Password (Plaintext!)</th>
+                        <th>Admin</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    <!-- Users will be loaded here -->
+                </tbody>
+            </table>
+
+            <!-- HTTP Headers Exposure Section -->
+            <div class="headers-section">
+                <h3>Exposed HTTP Response Headers</h3>
+                <p>This server also exposes sensitive information via HTTP headers on every response:</p>
+                <div class="headers-content">
+                    <div id="response-headers">
+                        Loading headers...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="javascripts/auth.js"></script>
+    <script src="javascripts/navbar.js"></script>
+    <script src="javascripts/admin-users.js"></script>
+</body>
+
+</html>

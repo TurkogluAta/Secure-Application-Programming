@@ -5,10 +5,14 @@ function updateNavbar() {
     if (Auth.isLoggedIn()) {
         const user = Auth.getCurrentUser();
 
+        // Build admin link if user is admin
+        const adminLink = user.is_admin ? '<a href="/admin-users.html">Admin Panel</a>' : '';
+
         // Replace Login link with user info and Logout
         navLinks.innerHTML = `
             <a href="/">Home</a>
             <a href="/add-pet.html">Add Pet</a>
+            ${adminLink}
             <span style="color: white; padding: 0.5rem 1rem;">Welcome, ${user.username}!</span>
             <a href="#" id="logout-link">Logout</a>
         `;

@@ -7,11 +7,13 @@ var path = require('path');
 var db = new sqlite3.Database(path.join(__dirname, '../database.db'));
 
 // VULNERABILITY 1: SQL INJECTION
+// VULNERABILITY 3: SENSITIVE DATA EXPOSURE (Plaintext password storage)
 // Register endpoint - INSECURE VERSION
 router.post('/register', function(req, res) {
     const { username, email, password } = req.body;
 
-    // INSECURE: String concatenation allows SQL injection
+    // VULNERABILITY 1: String concatenation allows SQL injection
+    // VULNERABILITY 3: Password stored in plaintext (no hashing!)
     const query = `INSERT INTO users (username, email, password) VALUES ('${username}', '${email}', '${password}')`;
 
     console.log('Executing query:', query);
@@ -38,11 +40,14 @@ router.post('/register', function(req, res) {
     });
 });
 
+// VULNERABILITY 1: SQL INJECTION
+// VULNERABILITY 3: SENSITIVE DATA EXPOSURE (Plaintext password comparison)
 // Login endpoint - INSECURE VERSION
 router.post('/login', function(req, res) {
     const { username, password } = req.body;
 
-    // INSECURE: Attacker can input: ' OR '1'='1
+    // VULNERABILITY 1: Attacker can input: ' OR '1'='1
+    // VULNERABILITY 3: Password compared in plaintext (no hashing!)
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
 
     console.log('Executing query:', query);
@@ -53,10 +58,11 @@ router.post('/login', function(req, res) {
         }
 
         if (user) {
+            // VULNERABILITY 3: Returns is_admin flag (used for frontend-only access control)
             res.json({
                 success: true,
                 message: 'Login successful',
-                user: { id: user.id, username: user.username }
+                user: { id: user.id, username: user.username, is_admin: user.is_admin }
             });
         } else {
             res.status(401).json({ message: 'Invalid credentials' });
@@ -238,6 +244,29 @@ router.post('/pets', function(req, res) {
             success: true,
             message: 'Pet added successfully',
             petId: this.lastID
+        });
+    });
+});
+
+// VULNERABILITY 3: SENSITIVE DATA EXPOSURE
+// Get all users with passwords - EXTREMELY INSECURE!
+// This endpoint exposes ALL user data including plaintext passwords
+router.get('/users', function(req, res) {
+    const query = 'SELECT * FROM users';
+
+    console.log('Executing query:', query);
+
+    db.all(query, [], (err, users) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ message: 'Server error' });
+        }
+
+        // INSECURE: Returns all user data including passwords in plaintext
+        res.json({
+            success: true,
+            count: users.length,
+            users: users  // Contains: id, username, email, PASSWORD, created_at
         });
     });
 });

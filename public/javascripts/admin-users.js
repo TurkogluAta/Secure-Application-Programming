@@ -1,0 +1,95 @@
+// VULNERABILITY 3: SENSITIVE DATA EXPOSURE
+// Frontend-only access control - easily bypassed!
+
+window.addEventListener('DOMContentLoaded', async () => {
+    // INSECURE: Only client-side check, no backend validation
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+    // Check if user is admin (frontend only!)
+    if (!currentUser || !currentUser.is_admin) {
+        // Show access denied message
+        document.getElementById('access-denied').style.display = 'block';
+        document.getElementById('users-content').style.display = 'none';
+        return;
+    }
+
+    // User is admin, show content
+    document.getElementById('access-denied').style.display = 'none';
+    document.getElementById('users-content').style.display = 'block';
+
+    // Fetch all users from API
+    // VULNERABILITY: This endpoint has NO backend authentication!
+    // Anyone can call: curl http://localhost:3000/api/users
+    try {
+        const response = await fetch('/api/users', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            displayUsers(data.users);
+            document.getElementById('user-count').textContent = data.count;
+
+            // VULNERABILITY 3: Display exposed HTTP headers
+            displayResponseHeaders(response);
+        } else {
+            console.error('Failed to load users:', response.statusText);
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+});
+
+function displayUsers(users) {
+    const tableBody = document.getElementById('users-table-body');
+
+    if (!users || users.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6">No users found.</td></tr>';
+        return;
+    }
+
+    // VULNERABILITY: Displays plaintext passwords from database
+    tableBody.innerHTML = users.map(user => `
+        <tr>
+            <td>${user.id}</td>
+            <td>${user.username}</td>
+            <td>${user.email}</td>
+            <td class="password-cell">${user.password}</td>
+            <td>${user.is_admin ? '<span class="admin-badge">ADMIN</span>' : 'User'}</td>
+            <td>${new Date(user.created_at).toLocaleString()}</td>
+        </tr>
+    `).join('');
+}
+
+// VULNERABILITY 3: Display exposed HTTP response headers
+function displayResponseHeaders(response) {
+    const headersDiv = document.getElementById('response-headers');
+
+    // Headers we're interested in showing
+    const sensitiveHeaders = [
+        'x-powered-by',
+        'server',
+        'x-app-version',
+        'x-database',
+        'x-environment',
+        'x-server-root'
+    ];
+
+    let headersText = '';
+
+    sensitiveHeaders.forEach(headerName => {
+        const value = response.headers.get(headerName);
+        if (value) {
+            headersText += `${headerName}: ${value}\n`;
+        }
+    });
+
+    if (headersText) {
+        headersDiv.textContent = headersText || 'No sensitive headers found';
+    } else {
+        headersDiv.textContent = 'Headers not accessible from JavaScript (check browser DevTools Network tab)';
+    }
+}
