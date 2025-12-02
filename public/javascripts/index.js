@@ -47,8 +47,8 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
 
     // CLIENT-SIDE MODE (default): Use JavaScript to fetch and render
 
-    // VULNERABILITY 2: DOM XSS
-    // Show search term BEFORE fetching (vulnerable to XSS)
+    // VULNERABILITY 2: DOM-BASED XSS
+    // User input directly inserted into DOM without sanitization
     if (searchTerm) {
         document.getElementById('search-result').innerHTML = `<p>Searching for: ${searchTerm}</p>`;
     }
@@ -93,13 +93,14 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
 // Render pet cards to the grid
 function displayPets(pets) {
     const petsGrid = document.getElementById('pets-grid');
-    
+
     if (pets.length === 0) {
         petsGrid.innerHTML = '<p>No pets found.</p>';
         return;
     }
 
-    // Create HTML for each pet card
+    // VULNERABILITY 2: STORED XSS - Pet data rendered without HTML encoding
+    // Malicious scripts in pet.name can execute when displayed
     petsGrid.innerHTML = pets.map(pet => `
         <div class="pet-card">
             <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">

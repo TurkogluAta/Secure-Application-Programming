@@ -134,6 +134,7 @@ router.get('/search-results', function(req, res) {
         if (pets.length > 0) {
             petsHtml = '<div class="pets-grid">';
             pets.forEach(pet => {
+                // VULNERABILITY 2: STORED XSS - Pet data from database rendered without encoding
                 petsHtml += `
                     <div class="pet-card">
                     <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">
@@ -214,12 +215,14 @@ router.get('/pets/:id', function(req, res) {
 });
 
 // Add new pet - INSECURE VERSION
-// WARNING: SQL Injection in all input fields
+// VULNERABILITY 1: SQL Injection in all input fields
+// VULNERABILITY 2: STORED XSS - No input sanitization allows malicious scripts to be stored in database
 router.post('/pets', function(req, res) {
     const { name, type, age, image_url, description } = req.body;
     const userId = 1;
 
-    // INSECURE: Direct string concatenation
+    // VULNERABILITY 1: Direct string concatenation allows SQL injection
+    // VULNERABILITY 2: No HTML sanitization - malicious scripts stored as-is in database
     const query = `INSERT INTO pets (name, type, age, image_url, description, user_id)
                    VALUES ('${name}', '${type}', ${age}, '${image_url}', '${description}', ${userId})`;
 

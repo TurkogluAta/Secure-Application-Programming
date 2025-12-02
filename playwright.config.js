@@ -11,6 +11,9 @@ module.exports = defineConfig({
     headless: true,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    launchOptions: {
+      slowMo: 500, // Slow down by 500ms between actions
+    },
   },
 
   webServer: {

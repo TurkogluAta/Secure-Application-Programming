@@ -22,7 +22,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         if (response.ok) {
             const pet = await response.json();
-            // Render pet details card
+            // VULNERABILITY 2: STORED XSS - innerHTML renders unescaped HTML from database
+            // Malicious scripts in pet.name or pet.description will execute
             detailsDiv.innerHTML = `
                 <div class="pet-detail-container">
                     <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">

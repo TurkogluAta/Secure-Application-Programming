@@ -37,19 +37,9 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         if (response.ok) {
             const result = await response.json();
 
-            // Store authentication token if provided
-            if (result.token) {
-                localStorage.setItem('authToken', result.token);
-            }
-
-            // Save user data to localStorage and auto-login
-            if (result.user) {
-                Auth.login(result.user);
-            }
-
-            // Show success message and redirect to home
-            alert('Registration successful! You are now logged in.');
-            window.location.href = '/';
+            // Show success message and redirect to login
+            alert('Registration successful! Please login with your credentials.');
+            window.location.href = '/login.html';
         } else {
             const error = await response.json();
             errorDiv.innerHTML = `<p>${error.message || 'Registration failed. Please try again.'}</p>`;
