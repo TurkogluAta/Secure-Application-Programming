@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_admin INTEGER DEFAULT 0
 );
 
 -- Create Pets table
@@ -24,8 +25,8 @@ CREATE TABLE IF NOT EXISTS pets (
 );
 
 -- Insert sample admin user if not exists
-INSERT OR IGNORE INTO users (username, email, password)
-VALUES ('admin', 'admin@petadoption.com', 'admin123');
+INSERT OR IGNORE INTO users (username, email, password, is_admin)
+VALUES ('admin', 'admin@petadoption.com', 'admin123', 1);
 
 -- Insert sample pets (all added by admin user with id=1)
 INSERT INTO pets (name, type, age, image_url, description, user_id) VALUES
