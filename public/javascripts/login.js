@@ -12,11 +12,16 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     errorDiv.innerHTML = '';
 
     try {
-        // Send POST request to login API
+        // SECURE: Fetch CSRF token before making POST request
+        const csrfResponse = await fetch('/api/csrf-token');
+        const { csrfToken } = await csrfResponse.json();
+
+        // Send POST request to login API with CSRF token
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-csrf-token': csrfToken
             },
             body: JSON.stringify(credentials)
         });
@@ -24,15 +29,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         if (response.ok) {
             const result = await response.json();
 
-            // Store authentication token if provided
-            if (result.token) {
-                localStorage.setItem('authToken', result.token);
-            }
-
-            // Save user data to localStorage using Auth utility
-            if (result.user) {
-                Auth.login(result.user);
-            }
+            // SECURE: Backend sets httpOnly session cookie automatically
+            // No need to store anything in localStorage!
 
             // Redirect to home page on success
             window.location.href = '/';

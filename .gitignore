@@ -8,6 +8,10 @@ database.db
 *.sqlite
 *.sqlite3
 
+# Log files
+logs/
+*.log
+
 # Test results
 test-results/
 playwright-report/

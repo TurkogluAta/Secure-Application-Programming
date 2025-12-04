@@ -25,11 +25,16 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     };
 
     try {
-        // Send POST request to register API
+        // SECURE: Fetch CSRF token before making POST request
+        const csrfResponse = await fetch('/api/csrf-token');
+        const { csrfToken } = await csrfResponse.json();
+
+        // Send POST request to register API with CSRF token
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-csrf-token': csrfToken
             },
             body: JSON.stringify(credentials)
         });

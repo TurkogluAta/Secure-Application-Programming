@@ -25,12 +25,6 @@
     <div class="container">
         <h1>Admin Panel - User Management</h1>
 
-        <!-- VULNERABILITY: Frontend-only access control warning -->
-        <div class="warning-box">
-            <strong>INSECURE:</strong> This page uses client-side only access control.
-            Anyone can access /api/users directly via curl or Postman!
-        </div>
-
         <div id="access-denied" class="error-message">
             <h2>Access Denied</h2>
             <p>You must be an administrator to view this page.</p>
@@ -69,7 +63,7 @@
         </div>
     </div>
 
-    <script src="javascripts/auth.js"></script>
+    <script src="javascripts/session.js"></script>
     <script src="javascripts/navbar.js"></script>
     <script src="javascripts/admin-users.js"></script>
 </body>

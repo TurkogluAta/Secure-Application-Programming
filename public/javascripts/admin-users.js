@@ -1,19 +1,17 @@
-// VULNERABILITY 3: SENSITIVE DATA EXPOSURE
-// Frontend-only access control - easily bypassed!
-
+// SECURE: Admin page with backend session validation
 window.addEventListener('DOMContentLoaded', async () => {
-    // INSECURE: Only client-side check, no backend validation
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    // SECURE: Check authentication and admin status from backend session
+    const user = await Session.checkAuth();
 
-    // Check if user is admin (frontend only!)
-    if (!currentUser || !currentUser.is_admin) {
+    // Check if user is admin via backend session
+    if (!user || !user.is_admin) {
         // Show access denied message
         document.getElementById('access-denied').style.display = 'block';
         document.getElementById('users-content').style.display = 'none';
         return;
     }
 
-    // User is admin, show content
+    // User is admin (verified by backend), show content
     document.getElementById('access-denied').style.display = 'none';
     document.getElementById('users-content').style.display = 'block';
 

@@ -1,7 +1,8 @@
-// Check if user is logged in when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    if (!Auth.isLoggedIn()) {
-        // Redirect to login page if not authenticated
+// SECURE: Check authentication via backend session when page loads
+document.addEventListener('DOMContentLoaded', async () => {
+    const user = await Session.checkAuth();
+    if (!user) {
+        // Not authenticated - redirect to login
         alert('Please login to add a pet!');
         window.location.href = '/login.html';
         return;
@@ -22,11 +23,16 @@ document.getElementById('add-pet-form').addEventListener('submit', async (e) => 
     };
 
     try {
-        // Send POST request to API
+        // SECURE: Fetch CSRF token before making POST request
+        const csrfResponse = await fetch('/api/csrf-token');
+        const { csrfToken } = await csrfResponse.json();
+
+        // Send POST request to API with CSRF token
         const response = await fetch('/api/pets', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-csrf-token': csrfToken
             },
             body: JSON.stringify(petData)
         });

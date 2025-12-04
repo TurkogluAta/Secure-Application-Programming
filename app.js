@@ -1,40 +1,96 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var session = require('express-session');
+const csrf = require('csurf');
+const helmet = require('helmet');
+const winston = require('./config/logger');
 
 var apiRouter = require('./routes/api');
 
 var app = express();
 
-// VULNERABILITY 3: SENSITIVE DATA EXPOSURE via HTTP Headers
-// Insecure headers that expose server information
+// SECURE: Session configuration with proper security settings
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,              // Don't save session if unmodified
+  saveUninitialized: false,   // Don't create session until something stored
+  cookie: {
+    httpOnly: true,           // Prevent client-side JS from reading the cookie
+    secure: false,            // Set to true in production with HTTPS
+    maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    sameSite: 'strict'        // CSRF protection - cookie only sent to same site
+  }
+}));
+
+// SECURE: Security Headers with Helmet.js
+app.use(helmet({
+  // Content Security Policy
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'"],  // unsafe-inline needed for inline styles
+      imgSrc: ["'self'", "data:", "https:"],    // Allow external images (pet photos)
+      connectSrc: ["'self'"],                   // API calls to own server only
+      objectSrc: ["'none'"]                     // Block Flash/Java plugins
+    }
+  },
+  // Prevents clickjacking attacks
+  frameguard: {
+    action: 'deny'
+  },
+  // Prevents MIME type sniffing
+  noSniff: true,
+  // Hide X-Powered-By header
+  hidePoweredBy: true,
+  // Strict-Transport-Security (HSTS) - Force HTTPS
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  // Referrer Policy - Control referrer information
+  referrerPolicy: {
+    policy: 'strict-origin-when-cross-origin'
+  }
+}));
+
+// SECURE: HTTP Request logging
+app.use(logger('dev'));
+
+// SECURE: Custom request logging middleware
 app.use((req, res, next) => {
-  // INSECURE: Exposes server technology and version
-  res.setHeader('X-Powered-By', 'Express 4.16.1');
-  res.setHeader('Server', 'Node.js/v18.0.0 (Ubuntu)');
+  const start = Date.now();
 
-  // INSECURE: Reveals internal application details
-  res.setHeader('X-App-Version', '1.0.0-insecure');
-  res.setHeader('X-Database', 'SQLite3');
-  res.setHeader('X-Environment', 'development');
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const username = req.session && req.session.username ? req.session.username : 'Anonymous';
+    const logMessage = `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms - User: ${username} - IP: ${req.ip}`;
 
-  // INSECURE: Discloses internal server paths
-  res.setHeader('X-Server-Root', __dirname);
-
-  // INSECURE: Expose all headers to JavaScript (makes them readable via fetch API)
-  res.setHeader('Access-Control-Expose-Headers', 'X-Powered-By, Server, X-App-Version, X-Database, X-Environment, X-Server-Root');
+    if (res.statusCode >= 400) {
+      winston.warn(logMessage);
+    } else {
+      winston.http(logMessage);
+    }
+  });
 
   next();
 });
 
-app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
+// SECURE: CSRF Protection with csurf
+const csrfProtection = csrf({ cookie: true });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', apiRouter);
 

@@ -2,14 +2,53 @@ var express = require('express');
 var router = express.Router();
 var sqlite3 = require('sqlite3').verbose();
 var path = require('path');
+const winston = require('../config/logger');
+const csrf = require('csurf');
 
 // Connect to SQLite database
 var db = new sqlite3.Database(path.join(__dirname, '../database.db'));
 
+// CSRF Protection middleware
+const csrfProtection = csrf({ cookie: true });
+
+// SECURE: Authentication middleware - Check if user is logged in
+function requireAuth(req, res, next) {
+    if (!req.session || !req.session.userId) {
+        winston.warn(`SECURITY: Unauthorized access attempt to protected endpoint ${req.path} - IP: ${req.ip}`);
+        return res.status(401).json({
+            message: 'Authentication required. Please login.'
+        });
+    }
+    next();
+}
+
+// SECURE: Admin middleware - Check if user is admin
+function requireAdmin(req, res, next) {
+    if (!req.session || !req.session.userId) {
+        winston.warn(`SECURITY: Unauthorized access attempt to admin endpoint ${req.path} - IP: ${req.ip}`);
+        return res.status(401).json({
+            message: 'Authentication required. Please login.'
+        });
+    }
+    if (!req.session.isAdmin) {
+        winston.warn(`SECURITY: Non-admin user attempted to access admin endpoint ${req.path} - User ID: ${req.session.userId}, IP: ${req.ip}`);
+        return res.status(403).json({
+            message: 'Admin privileges required.'
+        });
+    }
+    next();
+}
+
+// SECURE: Endpoint to get CSRF token
+router.get('/csrf-token', csrfProtection, function(req, res) {
+    res.json({ csrfToken: req.csrfToken() });
+});
+
 // VULNERABILITY 1: SQL INJECTION
 // VULNERABILITY 3: SENSITIVE DATA EXPOSURE (Plaintext password storage)
-// Register endpoint - INSECURE VERSION
-router.post('/register', function(req, res) {
+// SECURE: CSRF protection added
+// Register endpoint
+router.post('/register', csrfProtection, function(req, res) {
     const { username, email, password } = req.body;
 
     // VULNERABILITY 1: String concatenation allows SQL injection
@@ -21,6 +60,9 @@ router.post('/register', function(req, res) {
     db.run(query, [], function(err) {
         if (err) {
             console.error('Database error:', err.message);
+            // SECURE: Log failed registration attempt
+            winston.warn(`SECURITY: Failed registration attempt - Username: ${username}, Email: ${email}, Error: ${err.message}, IP: ${req.ip}`);
+
             if (err.message.includes('UNIQUE constraint failed')) {
                 if (err.message.includes('username')) {
                     return res.status(400).json({ message: 'Username already exists' });
@@ -32,6 +74,9 @@ router.post('/register', function(req, res) {
             return res.status(500).json({ message: 'Server error', error: err.message });
         }
 
+        // SECURE: Log successful registration
+        winston.info(`SECURITY: Successful registration - User ID: ${this.lastID}, Username: ${username}, Email: ${email}, IP: ${req.ip}`);
+
         res.json({
             success: true,
             message: 'Registration successful',
@@ -40,31 +85,40 @@ router.post('/register', function(req, res) {
     });
 });
 
-// VULNERABILITY 1: SQL INJECTION
-// VULNERABILITY 3: SENSITIVE DATA EXPOSURE (Plaintext password comparison)
-// Login endpoint - INSECURE VERSION
-router.post('/login', function(req, res) {
+// VULNERABILITY 1: SQL INJECTION (kept for now)
+// SECURE: Session management and CSRF protection added
+// Login endpoint with server-side session
+router.post('/login', csrfProtection, function(req, res) {
     const { username, password } = req.body;
 
-    // VULNERABILITY 1: Attacker can input: ' OR '1'='1
-    // VULNERABILITY 3: Password compared in plaintext (no hashing!)
+    // VULNERABILITY 1: Still vulnerable to SQL injection (will fix later)
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
 
     console.log('Executing query:', query);
 
     db.get(query, [], (err, user) => {
         if (err) {
+            winston.error(`SECURITY: Database error during login - Username: ${username}, IP: ${req.ip}`);
             return res.status(500).json({ message: 'Server error' });
         }
 
         if (user) {
-            // VULNERABILITY 3: Returns is_admin flag (used for frontend-only access control)
+            // SECURE: Store user info in server-side session
+            req.session.userId = user.id;
+            req.session.username = user.username;
+            req.session.isAdmin = user.is_admin;
+
+            // SECURE: Log successful login
+            winston.info(`SECURITY: Successful login - User ID: ${user.id}, Username: ${user.username}, IsAdmin: ${user.is_admin}, IP: ${req.ip}`);
+
             res.json({
                 success: true,
                 message: 'Login successful',
                 user: { id: user.id, username: user.username, is_admin: user.is_admin }
             });
         } else {
+            // SECURE: Log failed login attempt (potential brute force attack)
+            winston.warn(`SECURITY: Failed login attempt - Username: ${username}, IP: ${req.ip}`);
             res.status(401).json({ message: 'Invalid credentials' });
         }
     });
@@ -220,12 +274,14 @@ router.get('/pets/:id', function(req, res) {
     });
 });
 
-// Add new pet - INSECURE VERSION
+// Add new pet
 // VULNERABILITY 1: SQL Injection in all input fields
 // VULNERABILITY 2: STORED XSS - No input sanitization allows malicious scripts to be stored in database
-router.post('/pets', function(req, res) {
+// SECURE: CSRF protection and authentication required
+router.post('/pets', csrfProtection, requireAuth, function(req, res) {
     const { name, type, age, image_url, description } = req.body;
-    const userId = 1;
+    // SECURE: Get userId from session instead of hardcoding
+    const userId = req.session.userId;
 
     // VULNERABILITY 1: Direct string concatenation allows SQL injection
     // VULNERABILITY 2: No HTML sanitization - malicious scripts stored as-is in database
@@ -251,7 +307,8 @@ router.post('/pets', function(req, res) {
 // VULNERABILITY 3: SENSITIVE DATA EXPOSURE
 // Get all users with passwords - EXTREMELY INSECURE!
 // This endpoint exposes ALL user data including plaintext passwords
-router.get('/users', function(req, res) {
+// SECURE: Now requires admin authentication
+router.get('/users', requireAdmin, function(req, res) {
     const query = 'SELECT * FROM users';
 
     console.log('Executing query:', query);
@@ -269,6 +326,47 @@ router.get('/users', function(req, res) {
             users: users  // Contains: id, username, email, PASSWORD, created_at
         });
     });
+});
+
+// SECURE: Logout endpoint with CSRF protection - destroys server-side session
+router.post('/logout', csrfProtection, function(req, res) {
+    if (req.session) {
+        const userId = req.session.userId;
+        const username = req.session.username;
+
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('Error destroying session:', err);
+                winston.error(`SECURITY: Logout failed - User ID: ${userId}, Username: ${username}, IP: ${req.ip}`);
+                return res.status(500).json({ message: 'Logout failed' });
+            }
+
+            // SECURE: Log successful logout
+            winston.info(`SECURITY: Successful logout - User ID: ${userId}, Username: ${username}, IP: ${req.ip}`);
+
+            res.clearCookie('connect.sid'); // Clear session cookie
+            res.json({ success: true, message: 'Logged out successfully' });
+        });
+    } else {
+        winston.warn(`SECURITY: Logout attempt with no active session - IP: ${req.ip}`);
+        res.json({ success: true, message: 'No active session' });
+    }
+});
+
+// SECURE: Check session status
+router.get('/session', function(req, res) {
+    if (req.session && req.session.userId) {
+        res.json({
+            authenticated: true,
+            user: {
+                id: req.session.userId,
+                username: req.session.username,
+                is_admin: req.session.isAdmin
+            }
+        });
+    } else {
+        res.json({ authenticated: false });
+    }
 });
 
 module.exports = router;

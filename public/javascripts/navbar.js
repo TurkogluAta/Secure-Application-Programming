@@ -1,14 +1,14 @@
-// Navbar update based on authentication status
-function updateNavbar() {
+// SECURE: Navbar update based on backend session authentication
+async function updateNavbar() {
     const navLinks = document.querySelector('.nav-links');
 
-    if (Auth.isLoggedIn()) {
-        const user = Auth.getCurrentUser();
+    // SECURE: Check authentication status from backend session (not localStorage!)
+    const user = await Session.checkAuth();
 
-        // Build admin link if user is admin
+    if (user) {
+        // User is authenticated via backend session
         const adminLink = user.is_admin ? '<a href="/admin-users.html">Admin Panel</a>' : '';
 
-        // Replace Login link with user info and Logout
         navLinks.innerHTML = `
             <a href="/">Home</a>
             <a href="/add-pet.html">Add Pet</a>
@@ -18,10 +18,31 @@ function updateNavbar() {
         `;
 
         // Add logout handler
-        document.getElementById('logout-link').addEventListener('click', (e) => {
+        document.getElementById('logout-link').addEventListener('click', async (e) => {
             e.preventDefault();
-            Auth.logout();
-            window.location.href = '/';
+
+            try {
+                // SECURE: Fetch CSRF token before making POST request
+                const csrfResponse = await fetch('/api/csrf-token');
+                const { csrfToken } = await csrfResponse.json();
+
+                // Call backend logout endpoint to destroy server-side session
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-csrf-token': csrfToken
+                    }
+                });
+
+                // Backend destroys session, just redirect
+                // No localStorage to clean!
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error during logout:', error);
+                // Redirect anyway
+                window.location.href = '/';
+            }
         });
     } else {
         // Show default navigation for non-logged-in users
