@@ -7,6 +7,14 @@
  */
 let isServerSideMode = false;
 
+// SECURE: HTML escape function to prevent XSS attacks
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Handle rendering mode toggle
 document.getElementById('rendering-mode-switch').addEventListener('change', (e) => {
     isServerSideMode = e.target.checked;
@@ -47,10 +55,9 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
 
     // CLIENT-SIDE MODE (default): Use JavaScript to fetch and render
 
-    // VULNERABILITY 2: DOM-BASED XSS
-    // User input directly inserted into DOM without sanitization
+    // SECURE: DOM-BASED XSS FIXED - User input is HTML-escaped
     if (searchTerm) {
-        document.getElementById('search-result').innerHTML = `<p>Searching for: ${searchTerm}</p>`;
+        document.getElementById('search-result').innerHTML = `<p>Searching for: ${escapeHtml(searchTerm)}</p>`;
     }
 
     try {
@@ -74,11 +81,11 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
             if (searchTerm || type) {
                 let message = 'Results';
                 if (searchTerm && type) {
-                    message = `Search results for: ${searchTerm} (${type})`;
+                    message = `Search results for: ${escapeHtml(searchTerm)} (${escapeHtml(type)})`;
                 } else if (searchTerm) {
-                    message = `Search results for: ${searchTerm}`;
+                    message = `Search results for: ${escapeHtml(searchTerm)}`;
                 } else if (type) {
-                    message = `Filtered by: ${type}`;
+                    message = `Filtered by: ${escapeHtml(type)}`;
                 }
                 document.getElementById('search-result').innerHTML = `<p>${message}</p>`;
             }
@@ -99,15 +106,14 @@ function displayPets(pets) {
         return;
     }
 
-    // VULNERABILITY 2: STORED XSS - Pet data rendered without HTML encoding
-    // Malicious scripts in pet.name can execute when displayed
+    // SECURE: STORED XSS FIXED - All pet data is HTML-escaped before rendering
     petsGrid.innerHTML = pets.map(pet => `
         <div class="pet-card">
-            <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">
-            <h3>${pet.name}</h3>
-            <p>Type: ${pet.type}</p>
-            <p>Age: ${pet.age} years</p>
-            <a href="/pet-details.html?id=${pet.id}">View Details</a>
+            <img src="${escapeHtml(pet.image_url) || '/images/default-pet.jpg'}" alt="${escapeHtml(pet.name)}">
+            <h3>${escapeHtml(pet.name)}</h3>
+            <p>Type: ${escapeHtml(pet.type)}</p>
+            <p>Age: ${escapeHtml(pet.age)} years</p>
+            <a href="/pet-details.html?id=${escapeHtml(pet.id)}">View Details</a>
         </div>
     `).join('');
 }

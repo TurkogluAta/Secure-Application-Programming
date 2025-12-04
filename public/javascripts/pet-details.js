@@ -1,3 +1,11 @@
+// SECURE: HTML escape function to prevent XSS attacks
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Extract pet ID from URL query parameter
 const urlParams = new URLSearchParams(window.location.search);
 const petId = urlParams.get('id');
@@ -22,20 +30,19 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         if (response.ok) {
             const pet = await response.json();
-            // VULNERABILITY 2: STORED XSS - innerHTML renders unescaped HTML from database
-            // Malicious scripts in pet.name or pet.description will execute
+            // SECURE: STORED XSS FIXED - All pet data is HTML-escaped before rendering
             detailsDiv.innerHTML = `
                 <div class="pet-detail-container">
-                    <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">
-                    <h2>${pet.name}</h2>
-                    <p><strong>Type:</strong> ${pet.type}</p>
-                    <p><strong>Age:</strong> ${pet.age} years</p>
-                    <p><strong>Description:</strong> ${pet.description}</p>
+                    <img src="${escapeHtml(pet.image_url) || '/images/default-pet.jpg'}" alt="${escapeHtml(pet.name)}">
+                    <h2>${escapeHtml(pet.name)}</h2>
+                    <p><strong>Type:</strong> ${escapeHtml(pet.type)}</p>
+                    <p><strong>Age:</strong> ${escapeHtml(pet.age)} years</p>
+                    <p><strong>Description:</strong> ${escapeHtml(pet.description)}</p>
                 </div>
             `;
         } else {
             const error = await response.json();
-            detailsDiv.innerHTML = `<p>Error: ${error.message || 'Pet not found'}</p>`;
+            detailsDiv.innerHTML = `<p>Error: ${escapeHtml(error.message || 'Pet not found')}</p>`;
         }
     } catch (error) {
         console.error('Error loading pet details:', error);

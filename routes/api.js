@@ -4,6 +4,10 @@ var sqlite3 = require('sqlite3').verbose();
 var path = require('path');
 const winston = require('../config/logger');
 const csrf = require('csurf');
+const bcrypt = require('bcrypt');
+
+// SECURE: Salt rounds for bcrypt hashing
+const SALT_ROUNDS = 10;
 
 // Connect to SQLite database
 var db = new sqlite3.Database(path.join(__dirname, '../database.db'));
@@ -44,78 +48,102 @@ router.get('/csrf-token', csrfProtection, function(req, res) {
     res.json({ csrfToken: req.csrfToken() });
 });
 
-// VULNERABILITY 1: SQL INJECTION
-// VULNERABILITY 3: SENSITIVE DATA EXPOSURE (Plaintext password storage)
+// SECURE: SQL Injection FIXED with parameterized queries
+// SECURE: Sensitive Data Exposure FIXED with bcrypt password hashing
 // SECURE: CSRF protection added
 // Register endpoint
-router.post('/register', csrfProtection, function(req, res) {
+router.post('/register', csrfProtection, async function(req, res) {
     const { username, email, password } = req.body;
 
-    // VULNERABILITY 1: String concatenation allows SQL injection
-    // VULNERABILITY 3: Password stored in plaintext (no hashing!)
-    const query = `INSERT INTO users (username, email, password) VALUES ('${username}', '${email}', '${password}')`;
+    try {
+        // SECURE: Hash password with bcrypt before storing
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    console.log('Executing query:', query);
+        // SECURE: Parameterized query prevents SQL injection
+        const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`;
 
-    db.run(query, [], function(err) {
-        if (err) {
-            console.error('Database error:', err.message);
-            // SECURE: Log failed registration attempt
-            winston.warn(`SECURITY: Failed registration attempt - Username: ${username}, Email: ${email}, Error: ${err.message}, IP: ${req.ip}`);
+        console.log('Executing query with parameterized inputs');
 
-            if (err.message.includes('UNIQUE constraint failed')) {
-                if (err.message.includes('username')) {
-                    return res.status(400).json({ message: 'Username already exists' });
-                } else if (err.message.includes('email')) {
-                    return res.status(400).json({ message: 'Email already exists' });
+        db.run(query, [username, email, hashedPassword], function(err) {
+            if (err) {
+                console.error('Database error:', err.message);
+                // SECURE: Log failed registration attempt
+                winston.warn(`SECURITY: Failed registration attempt - Username: ${username}, Email: ${email}, Error: ${err.message}, IP: ${req.ip}`);
+
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    if (err.message.includes('username')) {
+                        return res.status(400).json({ message: 'Username already exists' });
+                    } else if (err.message.includes('email')) {
+                        return res.status(400).json({ message: 'Email already exists' });
+                    }
+                    return res.status(400).json({ message: 'Username or email already exists' });
                 }
-                return res.status(400).json({ message: 'Username or email already exists' });
+                return res.status(500).json({ message: 'Server error', error: err.message });
             }
-            return res.status(500).json({ message: 'Server error', error: err.message });
-        }
 
-        // SECURE: Log successful registration
-        winston.info(`SECURITY: Successful registration - User ID: ${this.lastID}, Username: ${username}, Email: ${email}, IP: ${req.ip}`);
+            // SECURE: Log successful registration
+            winston.info(`SECURITY: Successful registration - User ID: ${this.lastID}, Username: ${username}, Email: ${email}, IP: ${req.ip}`);
 
-        res.json({
-            success: true,
-            message: 'Registration successful',
-            user: { id: this.lastID, username: username, email: email }
+            res.json({
+                success: true,
+                message: 'Registration successful',
+                user: { id: this.lastID, username: username, email: email }
+            });
         });
-    });
+    } catch (error) {
+        console.error('Hashing error:', error);
+        winston.error(`SECURITY: Password hashing failed during registration - Username: ${username}, IP: ${req.ip}`);
+        return res.status(500).json({ message: 'Server error during registration' });
+    }
 });
 
-// VULNERABILITY 1: SQL INJECTION (kept for now)
+// SECURE: SQL Injection FIXED with parameterized queries
+// SECURE: Password verification with bcrypt
 // SECURE: Session management and CSRF protection added
 // Login endpoint with server-side session
-router.post('/login', csrfProtection, function(req, res) {
+router.post('/login', csrfProtection, async function(req, res) {
     const { username, password } = req.body;
 
-    // VULNERABILITY 1: Still vulnerable to SQL injection (will fix later)
-    const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
+    // SECURE: Parameterized query prevents SQL injection
+    const query = `SELECT * FROM users WHERE username = ?`;
 
-    console.log('Executing query:', query);
+    console.log('Executing query with parameterized inputs');
 
-    db.get(query, [], (err, user) => {
+    db.get(query, [username], async (err, user) => {
         if (err) {
             winston.error(`SECURITY: Database error during login - Username: ${username}, IP: ${req.ip}`);
             return res.status(500).json({ message: 'Server error' });
         }
 
         if (user) {
-            // SECURE: Store user info in server-side session
-            req.session.userId = user.id;
-            req.session.username = user.username;
-            req.session.isAdmin = user.is_admin;
+            try {
+                // SECURE: Compare password with bcrypt
+                const passwordMatch = await bcrypt.compare(password, user.password);
 
-            // SECURE: Log successful login
-            winston.info(`SECURITY: Successful login - User ID: ${user.id}, Username: ${user.username}, IsAdmin: ${user.is_admin}, IP: ${req.ip}`);
+                if (passwordMatch) {
+                    // SECURE: Store user info in server-side session
+                    req.session.userId = user.id;
+                    req.session.username = user.username;
+                    req.session.isAdmin = user.is_admin;
 
-            res.json({
-                success: true,
-                message: 'Login successful',
-                user: { id: user.id, username: user.username, is_admin: user.is_admin }
-            });
+                    // SECURE: Log successful login
+                    winston.info(`SECURITY: Successful login - User ID: ${user.id}, Username: ${user.username}, IsAdmin: ${user.is_admin}, IP: ${req.ip}`);
+
+                    res.json({
+                        success: true,
+                        message: 'Login successful',
+                        user: { id: user.id, username: user.username, is_admin: user.is_admin }
+                    });
+                } else {
+                    // SECURE: Log failed login attempt (potential brute force attack)
+                    winston.warn(`SECURITY: Failed login attempt - Username: ${username}, IP: ${req.ip}`);
+                    res.status(401).json({ message: 'Invalid credentials' });
+                }
+            } catch (error) {
+                console.error('Password comparison error:', error);
+                winston.error(`SECURITY: Password comparison failed during login - Username: ${username}, IP: ${req.ip}`);
+                return res.status(500).json({ message: 'Server error during login' });
+            }
         } else {
             // SECURE: Log failed login attempt (potential brute force attack)
             winston.warn(`SECURITY: Failed login attempt - Username: ${username}, IP: ${req.ip}`);
@@ -124,31 +152,35 @@ router.post('/login', csrfProtection, function(req, res) {
     });
 });
 
-// Get all pets or search by name - INSECURE VERSION
-// WARNING: SQL Injection in search parameter
+// SECURE: SQL Injection FIXED with parameterized queries
+// Get all pets or search by name
 router.get('/pets', function(req, res) {
     const searchTerm = req.query.search;
     const type = req.query.type;
 
     let query = 'SELECT * FROM pets';
     let conditions = [];
+    let params = [];
 
     if (searchTerm) {
-        // INSECURE: String concatenation allows SQL injection (e.g., ' OR 1=1--)
-        conditions.push(`name LIKE '%${searchTerm}%'`);
+        // SECURE: Parameterized query prevents SQL injection
+        conditions.push(`name LIKE ?`);
+        params.push(`%${searchTerm}%`);
     }
 
     if (type) {
-        conditions.push(`type = '${type}'`);
+        // SECURE: Parameterized query prevents SQL injection
+        conditions.push(`type = ?`);
+        params.push(type);
     }
 
     if (conditions.length > 0) {
         query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    console.log('Executing query:', query);
+    console.log('Executing query with parameterized inputs');
 
-    db.all(query, [], (err, pets) => {
+    db.all(query, params, (err, pets) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Server error' });
@@ -164,45 +196,58 @@ router.get('/pets', function(req, res) {
 // - /api/pets: Returns JSON → Client renders → DOM-based XSS risk
 // - /api/search-results: Returns HTML → Server renders → Reflected XSS risk
 
-// VULNERABILITIES:
-// 1. SQL INJECTION: User input directly in SQL query
-// 2. REFLECTED XSS: User input directly in HTML response
+// SECURE: SQL Injection and Reflected XSS FIXED
 router.get('/search-results', function(req, res) {
     const searchQuery = req.query.q;
     const type = req.query.type;
 
-    // INSECURE: SQL Injection vulnerability
+    // SECURE: Parameterized query prevents SQL injection
     let query = 'SELECT * FROM pets WHERE 1=1';
+    let params = [];
 
     if (searchQuery) {
-        query += ` AND name LIKE '%${searchQuery}%'`;
+        query += ` AND name LIKE ?`;
+        params.push(`%${searchQuery}%`);
     }
 
     if (type) {
-        query += ` AND type = '${type}'`;
+        query += ` AND type = ?`;
+        params.push(type);
     }
 
-    console.log('Executing query:', query);
+    console.log('Executing query with parameterized inputs');
 
-    db.all(query, [], (err, pets) => {
+    db.all(query, params, (err, pets) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).send('<h1>Server error</h1>');
+        }
+
+        // SECURE: HTML escape function to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         let petsHtml = '';
         if (pets.length > 0) {
             petsHtml = '<div class="pets-grid">';
             pets.forEach(pet => {
-                // VULNERABILITY 2: STORED XSS - Pet data from database rendered without encoding
+                // SECURE: All output is HTML-escaped to prevent stored XSS
                 petsHtml += `
                     <div class="pet-card">
-                    <img src="${pet.image_url || '/images/default-pet.jpg'}" alt="${pet.name}">
-                    <h2>${pet.name}</h2>
-                    <p><strong>Type:</strong> ${pet.type}</p>
-                    <p><strong>Age:</strong> ${pet.age} years</p>
-                    <p><strong>Description:</strong> ${pet.description}</p>
-                    <a href="/pet-details.html?id=${pet.id}">View Details</a>
+                    <img src="${escapeHtml(pet.image_url) || '/images/default-pet.jpg'}" alt="${escapeHtml(pet.name)}">
+                    <h2>${escapeHtml(pet.name)}</h2>
+                    <p><strong>Type:</strong> ${escapeHtml(pet.type)}</p>
+                    <p><strong>Age:</strong> ${escapeHtml(pet.age)} years</p>
+                    <p><strong>Description:</strong> ${escapeHtml(pet.description)}</p>
+                    <a href="/pet-details.html?id=${escapeHtml(pet.id)}">View Details</a>
                 </div>
                 `;
             });
@@ -211,7 +256,8 @@ router.get('/search-results', function(req, res) {
             petsHtml = '<p class="no-results">No pets found matching your search.</p>';
         }
 
-        // VULNERABILITY 2: REFLECTED XSS - URL parameter embedded without sanitization
+        // SECURE: URL parameters are HTML-escaped to prevent reflected XSS
+        const searchDisplay = escapeHtml(searchQuery || type || 'all pets');
         const html = `
             <!DOCTYPE html>
             <html>
@@ -232,8 +278,8 @@ router.get('/search-results', function(req, res) {
                 <div class="container">
                     <h1>Search Results</h1>
 
-                    <!-- REFLECTED XSS: URL parameter displayed without encoding -->
-                    <p class="search-info">You searched for: <strong>${searchQuery || type || 'all pets'}</strong></p>
+                    <!-- SECURE: URL parameter HTML-escaped to prevent reflected XSS -->
+                    <p class="search-info">You searched for: <strong>${searchDisplay}</strong></p>
 
                     <p class="results-count">Found ${pets.length} pet(s)</p>
 
@@ -251,17 +297,17 @@ router.get('/search-results', function(req, res) {
     });
 });
 
-// Get single pet by ID - INSECURE VERSION
-// WARNING: SQL Injection in ID parameter
+// SECURE: SQL Injection FIXED with parameterized queries
+// Get single pet by ID
 router.get('/pets/:id', function(req, res) {
     const petId = req.params.id;
 
-    // INSECURE: Direct concatenation of user input
-    const query = `SELECT * FROM pets WHERE id = ${petId}`;
+    // SECURE: Parameterized query prevents SQL injection
+    const query = `SELECT * FROM pets WHERE id = ?`;
 
-    console.log('Executing query:', query);
+    console.log('Executing query with parameterized inputs');
 
-    db.get(query, [], (err, pet) => {
+    db.get(query, [petId], (err, pet) => {
         if (err) {
             return res.status(500).json({ message: 'Server error' });
         }
@@ -274,23 +320,21 @@ router.get('/pets/:id', function(req, res) {
     });
 });
 
-// Add new pet
-// VULNERABILITY 1: SQL Injection in all input fields
-// VULNERABILITY 2: STORED XSS - No input sanitization allows malicious scripts to be stored in database
+// SECURE: SQL Injection FIXED with parameterized queries
+// NOTE: Input sanitization for XSS is handled client-side during display
 // SECURE: CSRF protection and authentication required
 router.post('/pets', csrfProtection, requireAuth, function(req, res) {
     const { name, type, age, image_url, description } = req.body;
     // SECURE: Get userId from session instead of hardcoding
     const userId = req.session.userId;
 
-    // VULNERABILITY 1: Direct string concatenation allows SQL injection
-    // VULNERABILITY 2: No HTML sanitization - malicious scripts stored as-is in database
+    // SECURE: Parameterized query prevents SQL injection
     const query = `INSERT INTO pets (name, type, age, image_url, description, user_id)
-                   VALUES ('${name}', '${type}', ${age}, '${image_url}', '${description}', ${userId})`;
+                   VALUES (?, ?, ?, ?, ?, ?)`;
 
-    console.log('Executing query:', query);
+    console.log('Executing query with parameterized inputs');
 
-    db.run(query, [], function(err) {
+    db.run(query, [name, type, age, image_url, description, userId], function(err) {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Failed to add pet' });

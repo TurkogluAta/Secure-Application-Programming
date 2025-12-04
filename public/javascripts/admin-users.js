@@ -1,3 +1,11 @@
+// SECURE: HTML escape function to prevent XSS attacks
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // SECURE: Admin page with backend session validation
 window.addEventListener('DOMContentLoaded', async () => {
     // SECURE: Check authentication and admin status from backend session
@@ -49,20 +57,21 @@ function displayUsers(users) {
         return;
     }
 
-    // VULNERABILITY: Displays plaintext passwords from database
+    // SECURE: STORED XSS FIXED - All user data is HTML-escaped before rendering
+    // NOTE: Still displays passwords (separate security issue - data exposure)
     tableBody.innerHTML = users.map(user => `
         <tr>
-            <td>${user.id}</td>
-            <td>${user.username}</td>
-            <td>${user.email}</td>
-            <td class="password-cell">${user.password}</td>
+            <td>${escapeHtml(user.id)}</td>
+            <td>${escapeHtml(user.username)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td class="password-cell">${escapeHtml(user.password)}</td>
             <td>${user.is_admin ? '<span class="admin-badge">ADMIN</span>' : 'User'}</td>
-            <td>${new Date(user.created_at).toLocaleString()}</td>
+            <td>${escapeHtml(new Date(user.created_at).toLocaleString())}</td>
         </tr>
     `).join('');
 }
 
-// VULNERABILITY 3: Display exposed HTTP response headers
+// Display HTTP response headers
 function displayResponseHeaders(response) {
     const headersDiv = document.getElementById('response-headers');
 
@@ -81,7 +90,8 @@ function displayResponseHeaders(response) {
     sensitiveHeaders.forEach(headerName => {
         const value = response.headers.get(headerName);
         if (value) {
-            headersText += `${headerName}: ${value}\n`;
+            // SECURE: Escape header values to prevent XSS
+            headersText += `${escapeHtml(headerName)}: ${escapeHtml(value)}\n`;
         }
     });
 
