@@ -298,12 +298,16 @@ router.get('/search-results', function(req, res) {
 });
 
 // SECURE: SQL Injection FIXED with parameterized queries
-// Get single pet by ID
+// Get single pet by ID with user contact information
 router.get('/pets/:id', function(req, res) {
     const petId = req.params.id;
 
     // SECURE: Parameterized query prevents SQL injection
-    const query = `SELECT * FROM pets WHERE id = ?`;
+    // JOIN with users table to get contact email
+    const query = `SELECT pets.*, users.email as contact_email
+                   FROM pets
+                   JOIN users ON pets.user_id = users.id
+                   WHERE pets.id = ?`;
 
     console.log('Executing query with parameterized inputs');
 

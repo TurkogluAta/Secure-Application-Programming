@@ -38,6 +38,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p><strong>Type:</strong> ${escapeHtml(pet.type)}</p>
                     <p><strong>Age:</strong> ${escapeHtml(pet.age)} years</p>
                     <p><strong>Description:</strong> ${escapeHtml(pet.description)}</p>
+                    <p><strong>Contact:</strong> <a href="mailto:${escapeHtml(pet.contact_email)}">${escapeHtml(pet.contact_email)}</a></p>
                 </div>
             `;
         } else {
