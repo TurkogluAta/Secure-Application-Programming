@@ -33,4 +33,4 @@ INSERT INTO pets (name, type, age, image_url, description, user_id) VALUES
 ('Max', 'dog', 3, 'https://images.unsplash.com/photo-1587300003388-59208cc962cb', 'A friendly golden retriever who loves to play fetch and go for walks.', 1),
 ('Luna', 'cat', 2, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba', 'A gentle and affectionate cat who enjoys cuddles and sunny window spots.', 1),
 ('Charlie', 'dog', 5, 'https://images.unsplash.com/photo-1552053831-71594a27632d', 'An energetic beagle who is great with kids and other pets.', 1),
-('Mittens', 'cat', 1, 'https://images.unsplash.com/photo-1573865526739-10c1dd7aad9f', 'A playful kitten with lots of energy and curiosity.', 1);
+('Mittens', 'cat', 1, 'https://images.unsplash.com/photo-1519052537078-e6302a4968d4', 'A playful kitten with lots of energy and curiosity.', 1);
