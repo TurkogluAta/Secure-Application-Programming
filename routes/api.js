@@ -197,13 +197,17 @@ router.get('/search-results', function(req, res) {
     });
 });
 
-// Get single pet by ID - INSECURE VERSION
+// Get single pet by ID with user contact information - INSECURE VERSION
 // WARNING: SQL Injection in ID parameter
 router.get('/pets/:id', function(req, res) {
     const petId = req.params.id;
 
     // INSECURE: Direct concatenation of user input
-    const query = `SELECT * FROM pets WHERE id = ${petId}`;
+    // JOIN with users table to get contact email
+    const query = `SELECT pets.*, users.email as contact_email
+                   FROM pets
+                   JOIN users ON pets.user_id = users.id
+                   WHERE pets.id = ${petId}`;
 
     console.log('Executing query:', query);
 

@@ -31,6 +31,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p><strong>Type:</strong> ${pet.type}</p>
                     <p><strong>Age:</strong> ${pet.age} years</p>
                     <p><strong>Description:</strong> ${pet.description}</p>
+                    <p><strong>Contact:</strong> <a href="mailto:${pet.contact_email}">${pet.contact_email}</a></p>
                 </div>
             `;
         } else {
